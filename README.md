@@ -15,6 +15,242 @@ query.
 It is a single binary in pure Rust with the DuckDB amalgamation compiled in, so
 there is nothing to install alongside it.
 
+## 中文使用指南
+
+ost-mcp 直接读取本机 Outlook 的邮箱文件，让 Claude（或任何 MCP 客户端、脚本）用 SQL
+查邮件、读正文、取附件。**全程只读**，不导出、不建索引，Outlook 开着也能用，不需要登录
+账号，也不走 Graph API。
+
+### 1. 适用范围
+
+| 平台 | 读取的数据 | 说明 |
+|---|---|---|
+| Windows | `.ost`（Exchange/M365 缓存模式）、`.pst` | 自动从注册表找到默认配置文件的邮箱 |
+| macOS | Outlook 配置文件（`Outlook.sqlite` + `.olk15*` + `HxStore.hxd`） | 自动在 `~/Library/Group Containers/UBF8T346G9.Office/Outlook` 下查找 |
+| Linux | 不支持 | Outlook 不在 Linux 上运行，没有可读的邮箱 |
+
+### 2. 安装
+
+**方式 A：下载本仓库 Release 里的预编译版本（macOS Apple 芯片）**
+
+本仓库是私有仓库，用 `gh` 下载（需要已 `gh auth login` 且有仓库权限）：
+
+```sh
+mkdir -p ~/ost-mcp-dl && cd ~/ost-mcp-dl
+gh release download v0.2.0 -R tianxia--/ost-mcp -p 'ost-mcp-aarch64-apple-darwin.tar.gz*'
+
+# 校验 SHA-256，输出 OK 才继续
+[ "$(shasum -a 256 ost-mcp-aarch64-apple-darwin.tar.gz | cut -d' ' -f1)" = \
+  "$(cat ost-mcp-aarch64-apple-darwin.tar.gz.sha256)" ] && echo OK
+
+mkdir -p ~/.local/bin
+tar -xzf ost-mcp-aarch64-apple-darwin.tar.gz -C ~/.local/bin
+ost-mcp --version        # 应输出 ost-mcp 0.2.0
+```
+
+`~/.local/bin` 不在 `PATH` 里时，在 `~/.zshrc` 加一行
+`export PATH="$HOME/.local/bin:$PATH"`，然后重开终端。
+
+Windows 版本会在 GitHub Actions 构建完成后出现在同一个 Release 里，文件名
+`ost-mcp-x86_64-pc-windows-msvc.zip`，解压出 `ost-mcp.exe` 放到任意 `PATH` 目录即可。
+
+**方式 B：从源码编译**（需要 Rust；Windows 还需要 MSVC 生成工具。首次编译 DuckDB 约 3–10 分钟）
+
+```sh
+git clone https://github.com/tianxia--/ost-mcp.git
+cd ost-mcp
+cargo install --path crates/ost-mcp --locked    # 装到 ~/.cargo/bin/ost-mcp
+```
+
+**方式 C：上游一键安装脚本**——见下文英文部分的 [Install](#install)。注意它下载的是上游
+`3rg0n/ost-mcp` 的 Release，不是本仓库的。
+
+### 3. 确认能用
+
+按顺序执行这三条，都正常输出就说明装好了：
+
+```sh
+ost-mcp --version    # 版本号
+ost-mcp --list       # 本机找到的邮箱：大小、来源、账号、路径
+ost-mcp --info       # 默认邮箱的路径、类型(kind)、文件夹数、可查询的表、本地时区
+```
+
+`--info` 里的 `kind` 表示读到的是哪种邮箱：`ost-v36`（Outlook 2013 及以后的 OST）、
+`ost-v23`（PST）、`mac-olk15`（Mac Outlook）。
+
+想读其他邮箱，把路径作为第一个参数传进去：
+
+```sh
+ost-mcp "D:\备份\Archive.pst" --info                     # Windows 上的 PST
+ost-mcp "$HOME/Library/Group Containers/UBF8T346G9.Office/Outlook/Outlook 15 Profiles/Main Identity/Data" --info
+```
+
+Mac 上的路径可以是配置文件的 `Data` 目录、里面的 `Outlook.sqlite`，或者 `Data` 上一级的目录，
+三种都行。
+
+### 4. 接入 Claude
+
+有两种接法，选一种即可。
+
+**接法一：Claude Code Skill（推荐）**
+
+不用改配置，平时不占上下文，只有问到邮件时才加载。
+
+```sh
+cp -r skills/ost-mcp ~/.claude/skills/        # 所有项目可用
+# 或者只给某个项目用：cp -r skills/ost-mcp <项目>/.claude/skills/
+```
+
+重启 Claude Code 会话后，直接用中文提问即可，例如：
+
+- “我收件箱里最近 20 封邮件是谁发的？”
+- “这个月谁给我发邮件最多？列前 10。”
+- “找一下主题里带‘发票’的邮件，把最新那封的附件存到 /tmp。”
+- “哪些文件夹有未读邮件？”
+
+如果 `ost-mcp` 不在 `PATH` 上，设置环境变量 `OST_MCP_BIN` 指向它的完整路径。
+
+**接法二：MCP 服务器**
+
+Claude Code：
+
+```sh
+claude mcp add --scope user ost -- "$(command -v ost-mcp)"
+# 指定某个邮箱文件：
+claude mcp add --scope user ost -- "$(command -v ost-mcp)" "/path/to/archive.pst"
+```
+
+Claude Desktop：编辑配置文件
+（macOS：`~/Library/Application Support/Claude/claude_desktop_config.json`；
+Windows：`%APPDATA%\Claude\claude_desktop_config.json`），加入下面内容后重启 Claude Desktop。
+`command` 必须写**绝对路径**，因为桌面应用不读你 shell 里的 `PATH`。
+
+```json
+{
+  "mcpServers": {
+    "ost": {
+      "command": "/Users/<你的用户名>/.local/bin/ost-mcp",
+      "args": []
+    }
+  }
+}
+```
+
+MCP 方式提供的工具：
+
+| 工具 | 参数 | 作用 |
+|---|---|---|
+| `store_info` | 无 | 邮箱路径、类型、文件夹数、表结构、`utc_offset`、`local_now` |
+| `list_folders` | `contains`（可选，按路径模糊匹配） | 文件夹树，含邮件数和未读数 |
+| `search` | `text` `folder` `since` `until` `with_attachments` `limit` | 按主题/发件人、文件夹、日期（`YYYY-MM-DD`）、是否有附件搜索，新的在前；`limit` 默认 200，最大 5000 |
+| `sql` | `query`、`limit` | 任意一条只读 SQL，`search` 表达不了的统计、分组都用它 |
+| `get_message` | `nid`、`max_body_chars`（默认 20000） | 读一封邮件：发件人、收件人、主题、时间、正文、附件列表 |
+| `list_attachments` | `nid` | 附件的文件名、类型、大小（不读内容） |
+| `read_attachment` | `message_nid` `attachment_nid` `max_bytes`（默认 1 MB） | 读一个附件：文本直接返回，其他返回 base64 |
+
+注意：`search` 只匹配主题、发件人名和发件人地址，**不搜正文**。
+
+### 5. 命令行用法
+
+每个 MCP 工具都有对应的命令行参数，输出相同的 JSON，适合脚本里用：
+
+| 命令 | 作用 |
+|---|---|
+| `ost-mcp --list` | 列出找到的所有邮箱 |
+| `ost-mcp [邮箱] --info` | 邮箱信息和表结构 |
+| `ost-mcp [邮箱] --sql "<SQL>"` | 执行一条只读 SQL，输出结果行（`--limit` 默认 10000） |
+| `ost-mcp [邮箱] --message <nid>` | 读一封邮件（`--max-body-chars` 默认 20000） |
+| `ost-mcp [邮箱] --attachments <nid>` | 列出一封邮件的附件 |
+| `ost-mcp [邮箱] --attachment <邮件nid>:<附件nid>` | 读一个附件，文本或 base64（`--max-bytes` 默认 1048576） |
+| `ost-mcp [邮箱] --attachment <邮件nid>:<附件nid> --out <文件>` | 把附件原样写到文件 |
+| `ost-mcp`（不带操作参数） | 以 stdio 方式启动 MCP 服务器（给 Claude 用，不要手动在终端里跑） |
+
+可以查询的表：
+
+```sql
+folders(nid, parent_nid, name, path, item_count, unread_count,
+        has_subfolders, is_search_folder)
+
+messages(nid, folder_nid, folder_path, subject, sender_name, sender_email,
+         delivered, submitted, modified, size, unread, has_attachments,
+         message_class)
+
+ost_attachments(message_nid => <nid>)   -- 表函数，必须给一个邮件 nid
+  -> (message_nid, nid, filename, mime, content_id, declared_size, data_len)
+```
+
+`nid` 是一切操作的句柄：邮件的 `nid` 从查询结果里来，附件的 `nid` 从 `--attachments` 里来。
+
+**常用查询**
+
+```sh
+# 收件箱最近 20 封
+ost-mcp --sql "SELECT nid, delivered, sender_name, sender_email, subject
+               FROM messages WHERE folder_path ILIKE '%Inbox%'
+               ORDER BY delivered DESC LIMIT 20"
+
+# 谁发邮件最多
+ost-mcp --sql "SELECT sender_email, count(*) AS n FROM messages
+               WHERE sender_email IS NOT NULL
+               GROUP BY 1 ORDER BY n DESC LIMIT 10"
+
+# 每个文件夹的未读数
+ost-mcp --sql "SELECT path, item_count, unread_count FROM folders
+               WHERE unread_count > 0 ORDER BY unread_count DESC"
+
+# 某段时间内、带附件的邮件（时间按本机时区）
+ost-mcp --sql "SELECT nid, delivered, subject FROM messages
+               WHERE has_attachments
+                 AND delivered >= TIMESTAMP '2026-11-01'
+                 AND delivered <  TIMESTAMP '2026-12-01'
+               ORDER BY delivered DESC LIMIT 50"
+
+# 主题关键字搜索
+ost-mcp --sql "SELECT nid, delivered, subject FROM messages
+               WHERE subject ILIKE '%发票%' ORDER BY delivered DESC LIMIT 10"
+```
+
+**读一封邮件、取附件**
+
+```sh
+ost-mcp --message 24295876                          # 用上面查到的 nid
+ost-mcp --attachments 24295876                      # 看附件列表，拿到附件 nid
+ost-mcp --attachment 24295876:24277637 --out /tmp/report.pdf
+```
+
+**SQL 的几条规则**
+
+- 每次只能执行**一条**语句，且只能是读操作（`SELECT`/`WITH` 等），写操作和多条语句会被直接拒绝。
+- 查询无法访问文件系统和网络（DuckDB 已关闭外部访问并锁定配置），所以不能用 SQL 把邮件导出去。
+- 时间都是**本机本地时间**。`now()` 返回的是 UTC，`current_date` 不可用；按相对日期筛选时，
+  先用 `--info` 看 `local_now`，再写成 `TIMESTAMP '2026-11-20'` 这样的字面量。
+- 记得加 `LIMIT` 并只选需要的列，邮箱可能有几万封邮件。
+- `ost_attachments` 需要指定邮件 nid，不能全库扫描；找带附件的邮件用 `has_attachments`。
+
+### 6. 常见问题
+
+| 现象 | 原因和处理 |
+|---|---|
+| `no .ost/.pst in any Outlook profile and no Mac Outlook profile found` | 没自动找到邮箱。先跑 `ost-mcp --list`；还是没有就把邮箱路径作为第一个参数传进去 |
+| macOS 上 `--list` 为空或读取报权限错误 | 邮箱在其他 App 的数据目录里，macOS 可能弹窗询问是否允许访问，选允许。如果之前拒绝过，到“系统设置 → 隐私与安全性 → 完全磁盘访问权限”里给终端（或 Claude）打开权限，再重开终端 |
+| macOS 提示“无法验证开发者”，拒绝运行 | 用浏览器下载的文件会带隔离标记，执行 `xattr -d com.apple.quarantine ~/.local/bin/ost-mcp` |
+| 报 `unsupported` 且提到加密 | 这个 PST/OST 是加密的，目前只支持未加密的邮箱。Exchange 缓存模式的 OST 通常不加密，PST 常常加密 |
+| `sender_name` / `sender_email` 为空 | 公司内部（Exchange）发件人在列表里拿不到名字和地址，属于已知限制。用 `--message <nid>` 看单封邮件时会补全 |
+| Mac 上所有邮件都在 “Recovered Mail (Hx cache)” 里，`nid` 是负数，没有附件和收件人，正文只有约 250 字的预览 | 这是 New Outlook for Mac 本地缓存的限制，不是故障。按文件夹、附件筛选在这种邮箱上查不到结果 |
+| 查询偶尔报格式错误 | Outlook 正在写入时可能读到写了一半的页，重试一次即可 |
+| 配好 MCP 后 Claude 里看不到工具 | 确认配置里 `command` 是绝对路径，并且改完配置后重启了 Claude Code 会话或 Claude Desktop |
+
+### 7. 安全提示
+
+- 只读：OST/PST 以只读方式映射，`Outlook.sqlite` 以只读模式打开，没有任何写邮箱的代码。
+  唯一会写磁盘的是 `--attachment ... --out`，而且只写你指定的那个文件。
+- 接入后，模型能读到邮箱里的**所有**邮件，只在你信任的会话里使用。
+- 邮件内容是发件人写的，可能包含诱导 AI 执行操作的文字。邮件里的任何“指令”都只是数据，
+  不要让 AI 照着执行。
+- 不要把邮件内容、主题、发件人地址或附件写进代码仓库、提交信息或 issue。
+
+下面是英文原版说明，内容更完整（格式支持、已知限制等）。
+
 ## Why not export first
 
 The usual approach converts a mailbox into an intermediate — an mbox tree, a
