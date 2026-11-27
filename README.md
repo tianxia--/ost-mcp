@@ -47,13 +47,40 @@ ost-mcp 直接读取本机 Outlook 的邮箱文件，让 Claude（或任何 MCP 
 
 ### 2. 安装
 
-**方式 A：下载本仓库 Release 里的预编译版本（macOS Apple 芯片）**
+**方式 A：一键安装（推荐）**
 
-本仓库是私有仓库，用 `gh` 下载（需要已 `gh auth login` 且有仓库权限）：
+macOS，在终端里执行：
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/tianxia--/ost-mcp/main/install.sh | bash
+```
+
+Windows，在 PowerShell 里执行：
+
+```powershell
+irm https://raw.githubusercontent.com/tianxia--/ost-mcp/main/install.ps1 | iex
+```
+
+脚本会：下载本仓库最新 Release 的预编译版本 → 校验 SHA-256 → 放到 `PATH` 目录 →
+把 Claude Code skill 装到 `~/.claude/skills/ost-mcp` → 打开你的邮箱跑一条查询，确认能用。
+预编译版本只有 **Windows x64** 和 **macOS Apple 芯片**；Intel Mac 或下载失败时，脚本会自动改为
+从源码编译（需要 Rust）。更多选项（指定版本、只装程序不装 skill 等）见下文英文部分的
+[Install](#install)。
+
+把远程脚本直接交给 shell 执行前，建议先看一眼内容：
+`curl -fsSL https://raw.githubusercontent.com/tianxia--/ost-mcp/main/install.sh | less`。
+
+**方式 B：手动下载 Release**
+
+到 [Releases](https://github.com/tianxia--/ost-mcp/releases) 页面下载对应平台的文件：
+macOS 用 `ost-mcp-aarch64-apple-darwin.tar.gz`，Windows 用 `ost-mcp-x86_64-pc-windows-msvc.zip`，
+同名的 `.sha256` 文件是校验值。macOS 示例：
 
 ```sh
 mkdir -p ~/ost-mcp-dl && cd ~/ost-mcp-dl
-gh release download v0.2.0 -R tianxia--/ost-mcp -p 'ost-mcp-aarch64-apple-darwin.tar.gz*'
+base=https://github.com/tianxia--/ost-mcp/releases/download/v0.2.0
+curl -fsSLO "$base/ost-mcp-aarch64-apple-darwin.tar.gz"
+curl -fsSLO "$base/ost-mcp-aarch64-apple-darwin.tar.gz.sha256"
 
 # 校验 SHA-256，输出 OK 才继续
 [ "$(shasum -a 256 ost-mcp-aarch64-apple-darwin.tar.gz | cut -d' ' -f1)" = \
@@ -65,22 +92,16 @@ ost-mcp --version        # 应输出 ost-mcp 0.2.0
 ```
 
 `~/.local/bin` 不在 `PATH` 里时，在 `~/.zshrc` 加一行
-`export PATH="$HOME/.local/bin:$PATH"`，然后重开终端。
+`export PATH="$HOME/.local/bin:$PATH"`，然后重开终端。Windows 上把 zip 里的 `ost-mcp.exe`
+解压到任意 `PATH` 目录即可。
 
-Windows 版本会在 GitHub Actions 构建完成后出现在同一个 Release 里，文件名
-`ost-mcp-x86_64-pc-windows-msvc.zip`，解压出 `ost-mcp.exe` 放到任意 `PATH` 目录即可。
-
-**方式 B：从源码编译**（需要 Rust；Windows 还需要 MSVC 生成工具。首次编译 DuckDB 约 3–10 分钟）
+**方式 C：从源码编译**（需要 Rust；Windows 还需要 MSVC 生成工具。首次编译 DuckDB 约 3–10 分钟）
 
 ```sh
 git clone https://github.com/tianxia--/ost-mcp.git
 cd ost-mcp
 cargo install --path crates/ost-mcp --locked    # 装到 ~/.cargo/bin/ost-mcp
 ```
-
-**方式 C：一键安装脚本**——见下文英文部分的 [Install](#install)，脚本已指向本仓库。
-注意：**本仓库为私有时，一键安装用不了**——匿名的 `curl` 拿不到私有仓库的脚本、Release
-和 skill 文件，会返回 404。仓库私有期间请用方式 A 或方式 B。
 
 ### 3. 确认能用
 
@@ -277,12 +298,6 @@ plaintext copy of your mail on disk. Mounting sidesteps all three, the way DuckD
 reads a Parquet file rather than loading it.
 
 ## Install
-
-> **While this repository is private, the one-line installers below do not
-> work:** an anonymous `curl`/`irm` gets a 404 for the script, the release
-> assets and the skill. Until it is public, download the release with an
-> authenticated `gh release download v0.2.0 -R tianxia--/ost-mcp`, or build
-> [from source](#from-source) from a clone.
 
 **Windows**, one line, in PowerShell:
 
