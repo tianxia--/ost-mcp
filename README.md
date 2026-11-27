@@ -15,6 +15,22 @@ query.
 It is a single binary in pure Rust with the DuckDB amalgamation compiled in, so
 there is nothing to install alongside it.
 
+## 免责声明 / Disclaimer
+
+本项目基于 [3rg0n/ost-mcp](https://github.com/3rg0n/ost-mcp)（作者 Ergon Copeland，MIT
+协议）修改而来，原作者的版权声明保留在 [LICENSE](LICENSE) 中。本仓库与原作者没有关联，
+也未获其认可；问题请在本仓库反馈，不要提交给上游。
+
+本软件按“原样”提供，不附带任何明示或暗示的担保。它会读取你本机的真实邮件，使用风险由你自行
+承担，作者和贡献者不对因使用本软件造成的任何损失负责。
+
+This project is based on, and modified from,
+[3rg0n/ost-mcp](https://github.com/3rg0n/ost-mcp) by Ergon Copeland (MIT); the
+original copyright notice is kept in [LICENSE](LICENSE). It is not affiliated with
+or endorsed by the original author — report issues here, not upstream. The
+software is provided "as is", without warranty of any kind; it reads your real
+mail, and you use it at your own risk.
+
 ## 中文使用指南
 
 ost-mcp 直接读取本机 Outlook 的邮箱文件，让 Claude（或任何 MCP 客户端、脚本）用 SQL
@@ -62,8 +78,9 @@ cd ost-mcp
 cargo install --path crates/ost-mcp --locked    # 装到 ~/.cargo/bin/ost-mcp
 ```
 
-**方式 C：上游一键安装脚本**——见下文英文部分的 [Install](#install)。注意它下载的是上游
-`3rg0n/ost-mcp` 的 Release，不是本仓库的。
+**方式 C：一键安装脚本**——见下文英文部分的 [Install](#install)，脚本已指向本仓库。
+注意：**本仓库为私有时，一键安装用不了**——匿名的 `curl` 拿不到私有仓库的脚本、Release
+和 skill 文件，会返回 404。仓库私有期间请用方式 A 或方式 B。
 
 ### 3. 确认能用
 
@@ -261,10 +278,16 @@ reads a Parquet file rather than loading it.
 
 ## Install
 
+> **While this repository is private, the one-line installers below do not
+> work:** an anonymous `curl`/`irm` gets a 404 for the script, the release
+> assets and the skill. Until it is public, download the release with an
+> authenticated `gh release download v0.2.0 -R tianxia--/ost-mcp`, or build
+> [from source](#from-source) from a clone.
+
 **Windows**, one line, in PowerShell:
 
 ```powershell
-irm https://raw.githubusercontent.com/3rg0n/ost-mcp/main/install.ps1 | iex
+irm https://raw.githubusercontent.com/tianxia--/ost-mcp/main/install.ps1 | iex
 ```
 
 That downloads the prebuilt binary from the latest release, checks it against its
@@ -277,13 +300,13 @@ Read it before you run it. Piping a remote script into a shell is a decision, no
 default:
 
 ```powershell
-irm https://raw.githubusercontent.com/3rg0n/ost-mcp/main/install.ps1 | more
+irm https://raw.githubusercontent.com/tianxia--/ost-mcp/main/install.ps1 | more
 ```
 
 Options need a scriptblock rather than a pipe:
 
 ```powershell
-& ([scriptblock]::Create((irm https://raw.githubusercontent.com/3rg0n/ost-mcp/main/install.ps1))) -FromSource
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/tianxia--/ost-mcp/main/install.ps1))) -FromSource
 ```
 
 | Option | What it does |
@@ -299,7 +322,7 @@ Options need a scriptblock rather than a pipe:
 **macOS**, one line, in Terminal:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/3rg0n/ost-mcp/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/tianxia--/ost-mcp/main/install.sh | bash
 ```
 
 That does the same thing: downloads the prebuilt binary, checks its SHA-256, puts it
@@ -309,7 +332,7 @@ Outlook profile and runs a query to show it works.
 Read it first the same way — `curl -fsSL <url> | less`. Options go after `-s --`:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/3rg0n/ost-mcp/main/install.sh | bash -s -- --from-source
+curl -fsSL https://raw.githubusercontent.com/tianxia--/ost-mcp/main/install.sh | bash -s -- --from-source
 ```
 
 | Option | What it does |
@@ -337,16 +360,16 @@ Install ost-mcp on this machine and confirm it works.
 
 1. Run the line for this platform.
    Windows, in PowerShell:
-     irm https://raw.githubusercontent.com/3rg0n/ost-mcp/main/install.ps1 | iex
+     irm https://raw.githubusercontent.com/tianxia--/ost-mcp/main/install.ps1 | iex
    macOS, in a shell:
-     curl -fsSL https://raw.githubusercontent.com/3rg0n/ost-mcp/main/install.sh | bash
+     curl -fsSL https://raw.githubusercontent.com/tianxia--/ost-mcp/main/install.sh | bash
 
 2. It downloads a prebuilt binary, so it normally needs no compiler. If it falls
    back to a source build and then stops on a missing prerequisite, install what it
    names and run it again. To let it install the toolchain itself, add the flag for
    this platform:
-     & ([scriptblock]::Create((irm https://raw.githubusercontent.com/3rg0n/ost-mcp/main/install.ps1))) -InstallPrereqs
-     curl -fsSL https://raw.githubusercontent.com/3rg0n/ost-mcp/main/install.sh | bash -s -- --install-prereqs
+     & ([scriptblock]::Create((irm https://raw.githubusercontent.com/tianxia--/ost-mcp/main/install.ps1))) -InstallPrereqs
+     curl -fsSL https://raw.githubusercontent.com/tianxia--/ost-mcp/main/install.sh | bash -s -- --install-prereqs
 
 3. Two failures worth knowing, both only on the source-build path. On Windows,
    LNK1104 on a library such as msvcrt.lib means cargo picked the wrong linker —

@@ -51,10 +51,10 @@
     Install the binary only.
 
 .EXAMPLE
-    irm https://raw.githubusercontent.com/3rg0n/ost-mcp/main/install.ps1 | iex
+    irm https://raw.githubusercontent.com/tianxia--/ost-mcp/main/install.ps1 | iex
 
 .EXAMPLE
-    & ([scriptblock]::Create((irm https://raw.githubusercontent.com/3rg0n/ost-mcp/main/install.ps1))) -FromSource -InstallPrereqs
+    & ([scriptblock]::Create((irm https://raw.githubusercontent.com/tianxia--/ost-mcp/main/install.ps1))) -FromSource -InstallPrereqs
 #>
 [CmdletBinding()]
 param(
@@ -71,8 +71,8 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
-$RepoUrl = 'https://github.com/3rg0n/ost-mcp'
-$RawBase = "https://raw.githubusercontent.com/3rg0n/ost-mcp/$Ref"
+$RepoUrl = 'https://github.com/tianxia--/ost-mcp'
+$RawBase = "https://raw.githubusercontent.com/tianxia--/ost-mcp/$Ref"
 
 # ------------------------------------------------------------------ output
 

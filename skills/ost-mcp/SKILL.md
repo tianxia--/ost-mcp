@@ -18,7 +18,7 @@ Every command below prints one JSON document to stdout and exits.
 Use `ost-mcp` if it is on `PATH`. Otherwise use `$env:OST_MCP_BIN` (or
 `$OST_MCP_BIN` on macOS). If neither resolves, stop and tell the user to
 run `cargo install --path crates/ost-mcp` from a clone of
-`github.com/3rg0n/ost-mcp` — do not guess at a path.
+`github.com/tianxia--/ost-mcp` — do not guess at a path.
 
 With no file argument the store is resolved from the Outlook profile registry
 on Windows or the Outlook group container on macOS, so a plain `ost-mcp --info`

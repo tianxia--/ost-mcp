@@ -16,7 +16,7 @@
 # neither backend has a code path that writes to a store.
 #
 # Usage:
-#   curl -fsSL https://raw.githubusercontent.com/3rg0n/ost-mcp/main/install.sh | bash
+#   curl -fsSL https://raw.githubusercontent.com/tianxia--/ost-mcp/main/install.sh | bash
 #   curl -fsSL .../install.sh | bash -s -- --from-source --install-prereqs
 #
 # Options:
@@ -67,8 +67,8 @@ case "$SKILL_SCOPE" in
   *) echo "--skill-scope must be 'user' or 'project', got: $SKILL_SCOPE" >&2; exit 64 ;;
 esac
 
-REPO_URL="https://github.com/3rg0n/ost-mcp"
-RAW_BASE="https://raw.githubusercontent.com/3rg0n/ost-mcp/$REF"
+REPO_URL="https://github.com/tianxia--/ost-mcp"
+RAW_BASE="https://raw.githubusercontent.com/tianxia--/ost-mcp/$REF"
 
 # ------------------------------------------------------------------ output
 
