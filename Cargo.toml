@@ -1,0 +1,38 @@
+[workspace]
+resolver = "2"
+members = ["crates/mailbox", "crates/ost", "crates/mac-outlook", "crates/ost-mcp"]
+exclude = ["spike"]
+
+[workspace.package]
+version = "0.2.0"
+edition = "2021"
+license = "MIT"
+
+[workspace.dependencies]
+memmap2 = "0.9.11"
+flate2 = "1.1.9"
+compressed-rtf = "1.0.1"
+# `bundled` compiles the DuckDB amalgamation, so the binary needs no installed
+# DuckDB. `vtab` is what lets the OST be queried in place instead of loaded.
+duckdb = { version = "1.10505.0", features = ["bundled", "vtab"] }
+rmcp = { version = "3.1.2", features = ["server", "transport-io", "macros"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1.0.151"
+# Must track the schemars major that rmcp's `JsonSchema` bound comes from.
+schemars = "1.2.2"
+base64 = "0.23.1"
+tokio = { version = "1.53.1", features = ["rt-multi-thread", "macros", "io-std"] }
+# Local-time conversion for the timestamps a model sees. Already compiled in
+# through schemars, with `clock` (which reads the system time zone) enabled.
+chrono = { version = "0.4.45", default-features = false, features = ["clock"] }
+# Reads the Outlook profile keys that name the store; Windows-only by nature.
+windows-registry = "0.6.1"
+# Bundled so the binary has no system SQLite dependency, same as `duckdb`.
+rusqlite = { version = "0.40.2", features = ["bundled"] }
+
+# Dependencies build without debug info in dev builds. The bundled DuckDB
+# amalgamation is C++, and with debug info its build output alone was ~3 GB per
+# copy under target/debug. Nobody steps through DuckDB here; this crate's own
+# code keeps full debug info.
+[profile.dev.package."*"]
+debug = false
